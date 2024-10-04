@@ -43,6 +43,9 @@ export const getBlogs = async (req, res) => {
 
     const Blog = await Blogs.aggregate([
         {
+            $match: { isDraft: false } // Filter to only include published blogs
+        },
+        {
             $lookup:{
                 from:"categories",
                 localField:"dropdown",
@@ -52,6 +55,18 @@ export const getBlogs = async (req, res) => {
         },
         {
             $unwind: "$categoriesInfo"
+        },
+
+        {
+            $lookup:{
+                from:"users",
+                localField:"userId",
+                foreignField:"_id",
+                as:"userInfo"
+            }
+        },
+        {
+            $unwind: "$userInfo"
         }
     ])
   
@@ -162,8 +177,82 @@ export const createUserBlog = async (req, res) => {
     }
 }
 
-// all blogs (drafts and published)
-export const getBlogsByUser = async (req, res) => {
+
+// blogs of their own (drafts and published)
+export const getBlogsOfUser = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
+
+        const blogs = await Blogs.aggregate([
+            {
+                $match: { userId: new mongoose.Types.ObjectId(userId) }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "dropdown",
+                    foreignField: "_id",
+                    as: "categoriesInfo"
+                }
+            },
+            {
+                $unwind: "$categoriesInfo"
+            }
+        ]);
+
+        if (blogs.length === 0) {
+            return res.status(404).json({ message: "No draft blogs found for this user" });
+        }
+
+        return res.status(200).json({ blogs });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || "Error fetching draft blogs by user" });
+    }
+};
+
+// for drafts
+export const getDrafts = async (req, res) => {
+    try {
+      const userId = req.user.userId;
+  
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+  
+      const drafts = await Blogs.aggregate([
+            {
+                $match: { userId: new mongoose.Types.ObjectId(userId), isDraft: true }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "dropdown",
+                    foreignField: "_id",
+                    as: "categoriesInfo"
+                }
+            },
+            {
+                $unwind: "$categoriesInfo"
+            }
+        ]);
+
+      
+      if (drafts.length === 0) {
+        return res.status(404).json({ message: "No draft blogs found for this user" });
+      }
+  
+      return res.status(200).json({ drafts });
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+};
+
+// for published blogs
+export const getPublishedBlogsOfUser = async (req, res) => {
     try {
         const userId = req.user.userId;
         
@@ -171,8 +260,26 @@ export const getBlogsByUser = async (req, res) => {
             return res.status(400).json({ message: "User ID is required" });
         }
     
-        const blogs = await Blogs.find({ userId: new mongoose.Types.ObjectId(userId)});
+        // const blogs = await Blogs.find({ userId: new mongoose.Types.ObjectId(userId), isDraft: false });
     
+        const blogs = await Blogs.aggregate([
+            {
+                $match: { userId: new mongoose.Types.ObjectId(userId), isDraft: false }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "dropdown",
+                    foreignField: "_id",
+                    as: "categoriesInfo"
+                }
+            },
+            {
+                $unwind: "$categoriesInfo"
+            }
+        ]);
+
+
         if (blogs.length === 0) {
             return res.status(404).json({ message: "No draft blogs found for this user" });
         }
@@ -183,52 +290,89 @@ export const getBlogsByUser = async (req, res) => {
       }
 }
 
-// for all drafts
-export const getDrafts = async (req, res) => {
-    try {
-      const userId = req.user.userId;
+
+// blogs of all users by id
+export const getBlogByUserId = async (req, res) => {
+
+    const blogs= await Blogs.aggregate([
+        {
+            $match:{userId:new mongoose.Types.ObjectId(req.params.id) }
+        },
+        {
+            $lookup:{
+                from:"blog",
+                localField:"blogId",
+                foreignField:"_id",
+                as:"blogInformation"
+            }
+        },
+        {
+            $unwind:"$blogInformation"
+        }
+    ])
+
+    const count= await Blogs.countDocuments();
+
+if (blogs.length === 0) {
+    return res.status(200).json({ data:blogs });
+} else {
+    return res.status(200).json({ data: blogs });
+}
+}
+
+// all blogs and drafts of all users
+export const getBlogsandDraftsOfAllUser = async (req, res) => {
+
+    const Blog = await Blogs.aggregate([
+        {
+            $lookup:{
+                from:"categories",
+                localField:"dropdown",
+                foreignField:"_id",
+                as:"categoriesInfo"
+            }
+        },
+        {
+            $unwind: "$categoriesInfo"
+        },
+
+        {
+            $lookup:{
+                from:"users",
+                localField:"userId",
+                foreignField:"_id",
+                as:"userInfo"
+            }
+        },
+        {
+            $unwind: "$userInfo"
+        }
+    ])
   
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
-      }
+        return res.status(200).json({ blogs: Blog });   
+}
+
+
+export const getDraftsOfAllUser = async (req, res) => {
+
+    const Blog = await Blogs.aggregate([
+        {
+            $match: { isDraft: true }
+        },
+        {
+            $lookup:{
+                from:"categories",
+                localField:"dropdown",
+                foreignField:"_id",
+                as:"categoriesInfo"
+            }
+        },
+        {
+            $unwind: "$categoriesInfo"
+        },
+
+       
+    ])
   
-      const drafts = await Blogs.find({ userId: new mongoose.Types.ObjectId(userId), isDraft: true });
-  
-      if (drafts.length === 0) {
-        return res.status(404).json({ message: "No draft blogs found for this user" });
-      }
-  
-      return res.status(200).json({ drafts });
-    } catch (error) {
-      return res.status(500).json({ message: error.message });
-    }
-  };
-
-
-// export const getBlogByUserId = async (req, res) => {
-
-//     const blogs= await Blogs.aggregate([
-//         {
-//             $match:{userId:new mongoose.Types.ObjectId(req.params.id) }
-//         },
-//         {
-//             $lookup:{
-//                 from:"blog",
-//                 localField:"blogId",
-//                 foreignField:"_id",
-//                 as:"blogInformation"
-//             }
-//         },
-//         {
-//             $unwind:"$blogInformation" 
-//         }
-//     ])
-
-//     const count= await Blogs.countDocuments();
-
-// if (blogs.length === 0) {
-//     return res.status(200).json({ data:blogs });
-// } else {
-//     return res.status(200).json({ data: blogs });
-// }
-// }
+        return res.status(200).json({ blogs: Blog }); 
+}
