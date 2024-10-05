@@ -28,7 +28,7 @@ const blogSchema = new mongoose.Schema({
     isDraft: {
         type: Boolean,
         default: false
-    },
+    }
 }, {
     timestamps: true
 });

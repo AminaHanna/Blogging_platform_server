@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createBlog, createUserBlog, deleteBlogById, getBlogById, getBlogByUserId, getBlogs, getBlogsByCategory, getBlogsOfUser, getBlogsandDraftsOfAllUser, getDrafts, getDraftsOfAllUser, getPublishedBlogsOfUser, searchBlog, updateBlogById } from "../controllers/blogController.js";
+import { createBlog, createUserBlog, deleteBlogById, getBlogById, getBlogByUserId, getBlogs, getBlogsByCategory, getBlogsOfUser, getBlogsandDraftsOfAllUser, getDrafts, getDraftsOfAllUser, getPublishedBlogsOfUser, publishBlog, searchBlog, updateBlogById } from "../controllers/blogController.js";
 import { verifyUserToken } from "../middleware/UserTokenVerify.js";
 import { adminVerifyToken } from "../middleware/AdminTokenVerify.js";
 
@@ -19,5 +19,6 @@ router.get('/:id', getBlogById);
 router.put('/:id', updateBlogById);
 router.delete('/:id', deleteBlogById);
 router.get('/user/:id', getBlogByUserId);
+router.put('/publish/:id', verifyUserToken, publishBlog);
 
 export default router;

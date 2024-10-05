@@ -114,12 +114,12 @@ export const getUsers = async (req, res) => {
 
         const getUsers = await User.find()
         console.log(getUsers)
+        const userCount = await User.countDocuments();
 
         if (getUsers.length === 0) {
             return res.status(400).json({ message: "user is not found!" })
         }else{
-
-            return res.status(200).json({ users: getUsers })
+            return res.status(200).json({ users: getUsers, count: userCount })
         }
     } catch (error) {
         return res.status(400).json({ message: error.message || 'error' })
