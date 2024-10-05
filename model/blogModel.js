@@ -28,7 +28,10 @@ const blogSchema = new mongoose.Schema({
     isDraft: {
         type: Boolean,
         default: false
-    }
+    },
+    likes: [{
+         type: mongoose.Schema.Types.ObjectId, ref: 'User'
+    }],
 }, {
     timestamps: true
 });
